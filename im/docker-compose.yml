@@ -1,0 +1,177 @@
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: im-nginx
+    restart: unless-stopped
+    depends_on:
+      humhub:
+        condition: service_started
+      adapter:
+        condition: service_healthy
+      auth-broker:
+        condition: service_started
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    env_file:
+      - .env
+    volumes:
+      - /im/nginx/conf.d:/etc/nginx/templates:ro
+      - /im/nginx/certs:/etc/nginx/certs:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - imnet
+
+  db:
+    image: mariadb:11.4
+    container_name: im-db
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --innodb-buffer-pool-size=512M
+      - --max-connections=100
+    env_file:
+      - .env
+    environment:
+      MARIADB_DATABASE: ${HUMHUB_DB_NAME}
+      MARIADB_USER: ${HUMHUB_DB_USER}
+      MARIADB_PASSWORD: ${HUMHUB_DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      TZ: ${TZ}
+    volumes:
+      - /im/mariadb/data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -uroot -p${MARIADB_ROOT_PASSWORD} --silent"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - imnet
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: im-redis
+    restart: unless-stopped
+    command: ["sh", "-c", "redis-server --appendonly yes --requirepass \"${REDIS_PASSWORD}\""]
+    env_file:
+      - .env
+    volumes:
+      - /im/redis/data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD} ping | grep -q PONG"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+    networks:
+      - imnet
+
+  humhub:
+    image: humhub/humhub:${HUMHUB_VERSION}
+    container_name: im-humhub
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      TZ: ${TZ}
+    volumes:
+      - /im/humhub/config/common.php:/var/www/localhost/htdocs/protected/config/common.php:ro
+      - /im/humhub/modules:/var/www/localhost/htdocs/protected/modules
+      - /im/humhub/uploads:/var/www/localhost/htdocs/uploads
+      - /im/humhub/custom:/var/www/localhost/htdocs/custom
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1/ | grep -qi humhub || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    networks:
+      - imnet
+
+  humhub-worker:
+    image: humhub/humhub:${HUMHUB_VERSION}
+    container_name: im-humhub-worker
+    restart: unless-stopped
+    depends_on:
+      humhub:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      TZ: ${TZ}
+    volumes:
+      - /im/humhub/config/common.php:/var/www/localhost/htdocs/protected/config/common.php:ro
+      - /im/humhub/modules:/var/www/localhost/htdocs/protected/modules
+      - /im/humhub/uploads:/var/www/localhost/htdocs/uploads
+      - /im/humhub/custom:/var/www/localhost/htdocs/custom
+    command: >-
+      sh -c 'while true; do
+        php /var/www/localhost/htdocs/protected/yii queue/run --verbose=1 || true;
+        php /var/www/localhost/htdocs/protected/yii cron/run || true;
+        sleep 60;
+      done'
+    networks:
+      - imnet
+
+  adapter:
+    build:
+      context: /im/adapter
+    container_name: im-adapter
+    restart: unless-stopped
+    depends_on:
+      humhub:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      TZ: ${TZ}
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - /im/adapter:/app
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:${ADAPTER_INTERNAL_PORT:-8000}/healthz || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - imnet
+
+  auth-broker:
+    build:
+      context: /im/auth-broker
+    container_name: im-auth-broker
+    restart: unless-stopped
+    depends_on:
+      humhub:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      TZ: ${TZ}
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - /im/auth-broker:/app
+    networks:
+      - imnet
+
+networks:
+  imnet:
+    driver: bridge
