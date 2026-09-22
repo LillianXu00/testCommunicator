@@ -1,0 +1,12 @@
+SSH Key Location (test_communicator)
+
+Host machine: iZ0xi77f33vt6sdp0i5u89Z
+
+Private key: /root/.ssh/test_communicator_ed25519
+Public key:  /root/.ssh/test_communicator_ed25519.pub
+
+Comment: LillianXu00@163.com
+Repo:    git@github.com:LillianXu00/testCommunicator.git
+
+Push command uses:
+  GIT_SSH_COMMAND="ssh -i /root/.ssh/test_communicator_ed25519 -o IdentitiesOnly=yes"
