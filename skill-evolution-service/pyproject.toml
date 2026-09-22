@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "manager-skill-evolution"
+version = "0.1.0"
+description = "Scheduled Memos-to-SkillHub evolution jobs driven by OpenClaw main"
+requires-python = ">=3.10"
+dependencies = [
+  "httpx>=0.28.1,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3,<10",
+  "pytest-asyncio>=0.25,<2",
+]
+
+[tool.setuptools.packages.find]
+include = ["skill_evolution*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

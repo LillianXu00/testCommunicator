@@ -1,0 +1,34 @@
+{
+  "agentId": "planner",
+  "integrationMode": "managed-adapter",
+  "name": "OpenClaw Planner",
+  "description": "A forward-looking report specialist backed by the existing OpenClaw planner agent.",
+  "version": "1.0.0",
+  "skills": [
+    {
+      "id": "forward-report",
+      "name": "Forward-looking report",
+      "description": "Generates a forward-looking report. The task must include digest_url and recipient.",
+      "tags": ["report", "planning", "research"],
+      "examples": [
+        "Generate a report from digest_url=https://example.com for recipient=user@example.com"
+      ],
+      "inputModes": ["text/plain"],
+      "outputModes": ["text/plain"]
+    }
+  ],
+  "inputModes": ["text/plain"],
+  "outputModes": ["text/plain"],
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": true
+  },
+  "backend": {
+    "adapterType": "openclaw-responses",
+    "endpoint": "${OPENCLAW_GATEWAY_URL:-http://127.0.0.1:18789}",
+    "agentId": "planner",
+    "authEnv": "OPENCLAW_GATEWAY_TOKEN",
+    "timeoutSeconds": 600
+  },
+  "status": "ACTIVE"
+}

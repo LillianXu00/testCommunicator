@@ -1,0 +1,50 @@
+{
+  "id": "manager-a2a-plugin",
+  "name": "Manager A2A Client",
+  "description": "Discover registered A2A agents, submit push-enabled tasks, and recover task status.",
+  "version": "0.1.0",
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "registryUrl": {
+        "type": "string",
+        "format": "uri",
+        "default": "http://127.0.0.1:4200",
+        "description": "Registry base URL queried by a2a_discover."
+      },
+      "timeoutMs": {
+        "type": "number",
+        "minimum": 1000,
+        "default": 30000
+      },
+      "callbackUrl": {
+        "type": "string",
+        "format": "uri",
+        "default": "http://127.0.0.1:18789/a2a/callback",
+        "description": "Manager plugin callback URL registered for A2A push notifications."
+      }
+    },
+    "additionalProperties": false
+  },
+  "activation": {
+    "onStartup": true
+  },
+  "contracts": {
+    "tools": [
+      "a2a_discover",
+      "a2a_send",
+      "a2a_get"
+    ]
+  },
+  "toolMetadata": {
+    "a2a_discover": {
+      "optional": true
+    },
+    "a2a_send": {
+      "optional": true
+    },
+    "a2a_get": {
+      "optional": true
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "agentId": "dongjian",
+  "owner": "insight-team",
+  "name": "Dongjian Insight Agent",
+  "description": "Produces evidence-based insight reports from supplied materials.",
+  "version": "1.0.0",
+  "skills": [
+    {
+      "id": "insight-report",
+      "name": "Insight report",
+      "description": "Produces an insight report and recommended responses.",
+      "examples": [
+        "Produce an insight report from this week's AI digest."
+      ],
+      "inputModes": [
+        "text/plain"
+      ],
+      "outputModes": [
+        "text/plain"
+      ]
+    }
+  ],
+  "interface": {
+    "kind": "declarative-http",
+    "endpoint": "http://127.0.0.1:9000/invoke",
+    "method": "POST",
+    "executionMode": "sync",
+    "request": {
+      "body": {
+        "query": "{{input}}",
+        "session_id": "{{contextId}}"
+      }
+    },
+    "response": {
+      "textSelectors": [
+        "$.data.report"
+      ]
+    }
+  }
+}

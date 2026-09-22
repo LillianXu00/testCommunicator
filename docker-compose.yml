@@ -1,0 +1,121 @@
+version: "3.9"
+
+services:
+  rabbitmq:
+    image: rabbitmq:4.1-management
+    container_name: a2a-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: "a2a"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD:-change-me-rabbitmq}"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  registry:
+    build:
+      context: ./registry-service
+    container_name: a2a-registry
+    ports:
+      - "4200:4200"
+    volumes:
+      - registry-data:/data
+      - ./config:/config:ro
+    environment:
+      REGISTRY_HOST: "0.0.0.0"
+      REGISTRY_PORT: "4200"
+      REGISTRY_DB: "/data/agent-registry.sqlite3"
+      REGISTRY_PUBLIC_URL: "${REGISTRY_PUBLIC_URL:-http://your-server-ip:4200}"
+      A2A_GATEWAY_PUBLIC_URL: "${A2A_GATEWAY_PUBLIC_URL:-http://your-server-ip:4101}"
+      # 密钥 — 生产环境务必替换下面的占位值，两次重启之间不能变
+      REGISTRY_SECRET_KEY: "${REGISTRY_SECRET_KEY:-change-me-to-a-random-64-char-hex-string}"
+      # 保护 Gateway ↔ Registry 内部通信
+      REGISTRY_SERVICE_TOKEN: "${REGISTRY_SERVICE_TOKEN:-change-me-service-token}"
+      # 保护自注册端点（可选）
+      REGISTRY_REGISTRATION_TOKEN: "${REGISTRY_REGISTRATION_TOKEN:-}"
+      # 保护管理端点（可选）
+      REGISTRY_ADMIN_TOKEN: "${REGISTRY_ADMIN_TOKEN:-}"
+      # 启动时种子文件（可选）
+      REGISTRY_BOOTSTRAP_FILE: "${REGISTRY_BOOTSTRAP_FILE:-/config/planner-agent.json}"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:4200/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  gateway:
+    build:
+      context: ./a2a-server
+    container_name: a2a-gateway
+    ports:
+      - "4101:4101"
+    environment:
+      A2A_HOST: "0.0.0.0"
+      A2A_PORT: "4101"
+      A2A_PUBLIC_URL: "${A2A_PUBLIC_URL:-http://your-server-ip:4101}"
+      A2A_REGISTRY_URL: "http://registry:4200"
+      # 与 Registry 的 REGISTRY_SERVICE_TOKEN 一致
+      A2A_REGISTRY_SERVICE_TOKEN: "${REGISTRY_SERVICE_TOKEN:-change-me-service-token}"
+      A2A_BROKER_URL: "amqp://a2a:${RABBITMQ_PASSWORD:-change-me-rabbitmq}@rabbitmq:5672/"
+      A2A_QUEUE_PREFIX: "${A2A_QUEUE_PREFIX:-a2a.task}"
+      A2A_QUEUE_PARTITIONS: "${A2A_QUEUE_PARTITIONS:-8}"
+      A2A_QUEUE_RESULT_TIMEOUT_SECONDS: "${A2A_QUEUE_RESULT_TIMEOUT_SECONDS:-1800}"
+      # OpenClaw Gateway token（调用 OpenClaw agent 时用）
+      OPENCLAW_GATEWAY_TOKEN: "${OPENCLAW_GATEWAY_TOKEN:-}"
+      # mock 模式（可选，用于测试）
+      A2A_MOCK: "${A2A_MOCK:-0}"
+    depends_on:
+      registry:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:4101/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  worker:
+    build:
+      context: ./a2a-server
+    container_name: a2a-worker
+    command: ["python", "-m", "a2a_server.worker"]
+    environment:
+      A2A_REGISTRY_URL: "http://registry:4200"
+      A2A_REGISTRY_SERVICE_TOKEN: "${REGISTRY_SERVICE_TOKEN:-change-me-service-token}"
+      A2A_BROKER_URL: "amqp://a2a:${RABBITMQ_PASSWORD:-change-me-rabbitmq}@rabbitmq:5672/"
+      A2A_QUEUE_PREFIX: "${A2A_QUEUE_PREFIX:-a2a.task}"
+      A2A_QUEUE_PARTITIONS: "${A2A_QUEUE_PARTITIONS:-8}"
+      A2A_WORKER_LEASE_SECONDS: "${A2A_WORKER_LEASE_SECONDS:-2400}"
+      AGENT_EXPERIENCE_ENABLED: "${AGENT_EXPERIENCE_ENABLED:-0}"
+      MEMOS_BASE_URL: "${MEMOS_BASE_URL:-https://memos.memtensor.cn/api/openmem/v1}"
+      MEMOS_API_KEY: "${MEMOS_API_KEY:-}"
+      MEMOS_TOKEN: "${MEMOS_TOKEN:-}"
+      MEMOS_USER_ID: "${MEMOS_USER_ID:-openclaw-user}"
+      MEMOS_APP_ID: "${MEMOS_APP_ID:-a2a-coordination}"
+      MEMOS_ALLOW_PUBLIC: "${MEMOS_ALLOW_PUBLIC:-0}"
+      MEMOS_ASYNC_MODE: "${MEMOS_ASYNC_MODE:-0}"
+      MEMOS_TIMEOUT_SECONDS: "${MEMOS_TIMEOUT_SECONDS:-30}"
+      OPENCLAW_GATEWAY_TOKEN: "${OPENCLAW_GATEWAY_TOKEN:-}"
+      A2A_MOCK: "${A2A_MOCK:-0}"
+    depends_on:
+      registry:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  registry-data:
+    driver: local
+  rabbitmq-data:
+    driver: local

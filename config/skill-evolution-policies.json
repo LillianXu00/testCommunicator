@@ -1,0 +1,35 @@
+{
+  "policies": [
+    {
+      "id": "insight-report-evolution",
+      "enabled": true,
+      "intervalSeconds": 60,
+      "runOnStartup": true,
+      "taskProfile": {
+        "name": "洞见前瞻报告生成",
+        "description": "从AI资讯或新闻聚合页获取文章，生成事实摘要、重点解读、趋势研判、银行或金融机构应对策略，并组装可交付的结构化报告或HTML邮件。",
+        "evidenceQuery": "检索与洞见前瞻报告生成任务直接相关的用户反馈和智能体执行经验。这类任务包括：从AI资讯或新闻聚合页提取并抓取文章，核验事实和信源，生成重点解读与趋势研判，提出银行或金融机构应对策略，以及组织结构化报告或HTML邮件。重点查找资讯抓取完整性、事实准确性、信源覆盖、分析深度、结论质量、策略可执行性、报告结构、受众价值和邮件交付方面实际发生的问题、有效做法及改进建议。只根据任务内容和经验内容的语义相关性召回，不限制执行主体或具体实现方式。",
+        "relevanceCriteria": [
+          "经验涉及AI资讯、科技新闻或行业动态的采集、核验与整理",
+          "经验涉及事实摘要、重点解读、趋势研判或金融机构应对策略",
+          "经验能够改善洞见前瞻报告的内容质量、工作流程或交付效果"
+        ]
+      },
+      "minimumNewMemories": 5,
+      "maxMemories": 50,
+      "targetSkill": "insight-report-writer",
+      "namespace": "global",
+      "visibility": "namespace-only",
+      "managerAgentId": "main",
+      "fetchCurrentSkill": true,
+      "autoPublish": true,
+      "allowedExtensions": [
+        ".md",
+        ".json",
+        ".txt",
+        ".yaml",
+        ".yml"
+      ]
+    }
+  ]
+}

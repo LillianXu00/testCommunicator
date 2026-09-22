@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Self Registration"
+  short_description: "Register and synchronize an agent with the A2A Registry"
+  default_prompt: "Use $agent-self-register to register this agent and its approved capabilities with the configured A2A Registry."

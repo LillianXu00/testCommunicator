@@ -1,0 +1,47 @@
+{
+  "agentId": "dongjian",
+  "integrationMode": "managed-adapter",
+  "name": "Dongjian Insight Reporter",
+  "description": "An insight-report specialist backed by the existing OpenClaw dongjian agent. It turns an AI news digest into evidence-based summaries, analysis, bank response strategies, and an HTML email.",
+  "version": "1.0.0",
+  "skills": [
+    {
+      "id": "insight-report-writer",
+      "name": "Insight report writing",
+      "description": "Crawls every article from a digest_url, writes fact summaries, key analysis and bank response strategies, then prepares or sends the HTML report to recipient.",
+      "tags": [
+        "insight-report",
+        "ai-news",
+        "financial-technology",
+        "email"
+      ],
+      "examples": [
+        "Generate and send an insight report from digest_url=https://example.com/digest to recipient=user@example.com"
+      ],
+      "inputModes": [
+        "text/plain"
+      ],
+      "outputModes": [
+        "text/plain"
+      ]
+    }
+  ],
+  "inputModes": [
+    "text/plain"
+  ],
+  "outputModes": [
+    "text/plain"
+  ],
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": true
+  },
+  "backend": {
+    "adapterType": "openclaw-responses",
+    "endpoint": "http://127.0.0.1:18789",
+    "agentId": "dongjian",
+    "authEnv": "OPENCLAW_GATEWAY_TOKEN",
+    "timeoutSeconds": 1200
+  },
+  "status": "ACTIVE"
+}
